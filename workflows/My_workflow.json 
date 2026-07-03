@@ -1,0 +1,118 @@
+{
+  "createdAt": "2026-07-03T06:35:38.052Z",
+  "updatedAt": "2026-07-03T06:35:38.052Z",
+  "id": "fxATGBEK3vElzs1y",
+  "name": "My workflow",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 2 * * *"
+            }
+          ]
+        }
+      },
+      "id": "ce52debc-4a36-40d5-a372-ec657974d6c1",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        460,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:5678/api/v1/workflows",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "00dfb1e1-eb3d-4102-a332-689a338d8321",
+      "name": "Get Workflows (n8n API)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        680,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "b2c0b1ab-8dbb-4e8e-87ef-188962e00518",
+      "name": "Split into Workflows",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        900,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "createOrUpdate",
+        "owner": "YOUR_GITHUB_USERNAME",
+        "repository": "YOUR_BACKUP_REPO_NAME"
+      },
+      "id": "c9da051d-b660-4831-92b5-01a8f14fb595",
+      "name": "GitHub (Commit File)",
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        460
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Workflows (n8n API)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Workflows (n8n API)": {
+      "main": [
+        [
+          {
+            "node": "Split into Workflows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split into Workflows": {
+      "main": [
+        [
+          {
+            "node": "GitHub (Commit File)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "b54606fe-6976-4f4c-acef-993d146a9e6d",
+  "triggerCount": 0,
+  "tags": []
+}
