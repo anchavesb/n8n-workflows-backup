@@ -1,6 +1,6 @@
 {
   "createdAt": "2026-06-21T10:13:18.686Z",
-  "updatedAt": "2026-06-22T06:46:49.961Z",
+  "updatedAt": "2026-07-06T04:58:09.585Z",
   "id": "sx2EbzFQd96att2P",
   "name": "WhatsApp Dolores",
   "active": true,
@@ -9,13 +9,13 @@
       "parameters": {
         "jsCode": "const body = $input.first().json.body;\n\nif (body && body.event === 'messages.upsert') {\n    const data = body.data;\n    const key = data?.key;\n    const message = data?.message;\n\n    // 1. Extract raw text from the message                                                                                                                                                                                                    \n    const text = message?.conversation || message?.extendedTextMessage?.text || \"\";\n    const fromMe = key?.fromMe;\n    const remoteJid = key?.remoteJid;\n\n    // 2. Check if the message starts with \"Dolores\" (case-insensitive)                                                                                                                                                                        \n    // Matches \"Dolores, hello\", \"dolores: hello\", \"Dolores hello\"                                                                                                                                                                             \n    const triggerMatch = text.match(/^dolores\\b[,:\\s]*/i);\n    const startsWithDolores = !!triggerMatch;\n\n    // 3. Condition: Must be sent by you AND start with \"Dolores\"                                                                                                                                                                              \n    const shouldProcess = fromMe && startsWithDolores;\n\n    // 4. Strip the \"Dolores\" prefix so the AI receives a clean prompt                                                                                                                                                                         \n    let cleanText = text;\n    if (startsWithDolores) {\n        cleanText = text.substring(triggerMatch[0].length).trim();\n    }\n\n    return {\n        json: {\n            shouldProcess: shouldProcess,\n            text: cleanText,\n            remoteJid: remoteJid,\n            senderName: data?.pushName || \"Self\"\n        }\n    };\n}"
       },
-      "id": "0148a6c7-5b45-468d-a4e5-81499cbde977",
+      "id": "01851310-3a18-4116-ae92-559761122d3b",
       "name": "Code",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1780,
-        580
+        3300,
+        1040
       ]
     },
     {
@@ -42,13 +42,13 @@
         },
         "options": {}
       },
-      "id": "24847d1c-1c8a-4c73-a045-31ae9fb0c319",
+      "id": "0810ad26-ba30-479d-b13d-d999a03551fe",
       "name": "If",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        2020,
-        580
+        3540,
+        1040
       ]
     },
     {
@@ -77,25 +77,25 @@
             },
             {
               "name": "text",
-              "value": "=🤖 {{ $json.message.replace(/\\[emotion:[a-z]+\\]\\s*/gi, '') }}"
+              "value": "=🤖 {{ $json.message.replace(/\\s*\\[emotion:[a-z]+\\]/gi, '') }}"
             }
           ]
         },
         "options": {}
       },
-      "id": "099efaf0-1302-40e7-8431-c2398e26640e",
+      "id": "852d55d6-293e-4587-94d0-d4baad763438",
       "name": "Send message to WhatsApp",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2460,
-        580
+        3980,
+        1040
       ]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "http://dolores-brain.dolores-brain.svc.cluster.local:8003/v1/chat",
+        "url": "http://dolores-assistant.dolores-assistant.svc.cluster.local:8000/v1/chat",
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
@@ -111,13 +111,13 @@
         },
         "options": {}
       },
-      "id": "0cf4a507-590f-4b4a-b483-3c500a1c20cc",
+      "id": "e785765c-c3c0-45d7-8d54-60ada4d39818",
       "name": "ASk Dolores",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2240,
-        580
+        3760,
+        1040
       ]
     },
     {
@@ -126,13 +126,13 @@
         "path": "whatsapp-messages",
         "options": {}
       },
-      "id": "2eabf7c7-2624-4491-9a59-dfc383c0938b",
+      "id": "326ac5a5-7b81-4779-80c1-7e106c973861",
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        1580,
-        560
+        3100,
+        1020
       ],
       "webhookId": "6ebbcfa7-41c0-42f7-8f87-66ce9830ee94"
     }
@@ -191,7 +191,7 @@
     "templateCredsSetupCompleted": true
   },
   "pinData": {},
-  "versionId": "8ae3c6f9-4e91-421e-98ef-6983eeb8cfd1",
+  "versionId": "659136b5-2495-4dfb-aca5-c817c7fa6d43",
   "triggerCount": 1,
   "tags": []
 }
