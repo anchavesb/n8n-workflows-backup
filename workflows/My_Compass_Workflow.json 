@@ -1,9 +1,10 @@
 {
-  "createdAt": "2026-06-19T10:35:37.307Z",
   "updatedAt": "2026-06-26T05:00:27.774Z",
+  "createdAt": "2026-06-19T10:35:37.307Z",
   "id": "zusjnAPudZSGsTaU",
   "name": "My Compass Workflow",
   "active": true,
+  "isArchived": false,
   "nodes": [
     {
       "parameters": {
@@ -315,8 +316,322 @@
   "meta": {
     "templateCredsSetupCompleted": true
   },
+  "nodeGroups": [],
   "pinData": {},
   "versionId": "fcb8a1e5-16bc-4c36-8b53-e7806689162b",
+  "activeVersionId": "fcb8a1e5-16bc-4c36-8b53-e7806689162b",
   "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-06-19T10:35:37.307Z",
+      "createdAt": "2026-06-19T10:35:37.307Z",
+      "role": "workflow:owner",
+      "workflowId": "zusjnAPudZSGsTaU",
+      "projectId": "1N6feJ0Rbl0pDSNB"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-07T12:43:09.464Z",
+    "createdAt": "2026-07-07T12:43:09.464Z",
+    "versionId": "fcb8a1e5-16bc-4c36-8b53-e7806689162b",
+    "workflowId": "zusjnAPudZSGsTaU",
+    "nodes": [
+      {
+        "parameters": {
+          "pollTimes": {
+            "item": [
+              {
+                "mode": "everyHour"
+              }
+            ]
+          },
+          "simple": false,
+          "filters": {
+            "q": "(from:compass@compass.email OR subject:compass) -label:compass-processed"
+          },
+          "options": {}
+        },
+        "id": "7f3ce3e6-2be4-449c-a19a-82e34d14abf4",
+        "name": "Trigger on Compass Email",
+        "type": "n8n-nodes-base.gmailTrigger",
+        "typeVersion": 1.1,
+        "position": [
+          960,
+          400
+        ],
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "o4rS2FA3ZVrhI1QZ",
+            "name": "Gmail account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "http://dolores-brain.dolores-brain.svc.cluster.local:8003/v1/chat",
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "message",
+                "value": "=This email was sent on: {{ $json.d.createdTimestamp ?? $json.d.createdDate ?? $now.toFormat('yyyy-MM-dd') }}. Use this date as the reference point when resolving relative dates like \"tomorrow\", \"next week\", \"this Friday\", etc.. Here is the raw HTML content of a school news item:\n{{ $json.d.itemContent }}                                                                                                                                                                                           Analyze this content carefully.\n1. Determine if it is relevant to my daughter Diana in Grade 2 (e.g., mentions \"Grade 2\", \"Year 2\", \"Diana\", or is a whole-school announcement).\n2. Extract ALL concrete scheduled events or action deadlines from the text.\n       - Relative dates like \"tomorrow\", \"next Monday\", \"this Friday\" ARE concrete — resolve them using today's date above.\n       - Explicit times like \"9:10am\", \"2:30pm\" ARE concrete.\n       - Do NOT create events for general, open-ended requests with no identifiable date or time (e.g., \"help when you can\", \"book covering tubs available\").\n       - If the text mentions multiple times for the same day (e.g., an event start and an early dismissal), use the earliest time as \"start_time\" and the latest time as \"end_time\".\n       - For \"end_time\": if an explicit end time, dismissal time, or pickup time is mentioned, use it. If no end time can be determined, set \"end_time\" to 2 hours after \"start_time\".\n       - \"end_time\" must NEVER be null if \"start_time\" is set.\nRespond ONLY with a JSON object of the following format, and nothing else:                   \n{                    \n\"involved\": true/false,                  \n\"has_deadline_or_event\": true/false,                  \n\"title\": \"Name of the event / deadline (or null if none)\",                  \n\"start_time\": \"YYYY-MM-DDTHH:MM:SS (or null if none)\",                  \n\"end_time\": \"YYYY-MM-DDTHH:MM:SS (or null if none)\",                  \n\"summary\": \"Brief summary of the details\"                  \n}"
+              },
+              {
+                "name": "system_prompt",
+                "value": "You are a parent's assistant analyzing school notifications. You MUST respond ONLY with a raw JSON block matching the requested format. "
+              },
+              {
+                "name": "temperature",
+                "value": "0.2"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "039e6383-eb60-48f7-bf0b-62d91c8bb410",
+        "name": "Call Dolores Brain",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1720,
+          400
+        ]
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForEachItem",
+          "jsCode": "const responseText = $input.item.json.message;\n\nfunction processResult(parsed) {\n    if (!parsed.end_time && parsed.start_time) {\n        // Just add 2 hours via string parsing — no Date object needed\n        const parts = parsed.start_time.split('T');\n        const timeParts = parts[1].split(':');\n        let hour = parseInt(timeParts[0]) + 2;\n        if (hour >= 24) hour -= 24;\n        parsed.end_time = parts[0] + 'T' + String(hour).padStart(2, '0') + ':' + timeParts[1] + ':' + timeParts[2];\n    }\n    return {\n        json: parsed\n    };\n}\n\ntry {\n    return processResult(JSON.parse(responseText));\n} catch (e) {\n    try {\n        const cleanText = responseText.replace(/```json|```/g, \"\").trim();\n        return processResult(JSON.parse(cleanText));\n    } catch (err) {\n        return {\n            json: {\n                involved: false,\n                has_deadline_or_event: false,\n                error: err.message\n            }\n        };\n    }\n}"
+        },
+        "id": "8a25f153-8fdc-44bc-a06d-e1492d6d30c1",
+        "name": "Parse AI Response",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1920,
+          200
+        ]
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForEachItem",
+          "jsCode": "const txt = ($json.text || $json.html || \"\").replace(/<script[^>]*>([\\s\\S]*?)<\\/script>/gi, \"\").replace(/<style[^>]*>([\\s\\S]*?)<\\/style>/gi, \"\").replace(/<[^>]+>/g, \" \").replace(/&nbsp;/g, \" \").replace(/\\s+/g, \" \").trim(); \nconst  urlMatch = txt.match(/https:\\/\\/[^\\s\\]]+AccessNewsItem[^\\s\\]]+/i);\nreturn { text: txt, url: urlMatch ? urlMatch[0] : \"\" }; "
+        },
+        "id": "dd1d93aa-daa2-4773-81b3-8d2fc02d7a85",
+        "name": "Convert email html to text",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1220,
+          400
+        ]
+      },
+      {
+        "parameters": {
+          "calendar": {
+            "__rl": true,
+            "value": "82a63272b9ef4208e36f3c17c1e1ffbab220b2bbaedef61d52f920a83fc9095a@group.calendar.google.com",
+            "mode": "list",
+            "cachedResultName": "AyA"
+          },
+          "start": "={{ $json.start_time }}",
+          "end": "={{ $json.end_time }}",
+          "additionalFields": {
+            "description": "={{ $json.title }}",
+            "summary": "={{ $json.summary }}"
+          }
+        },
+        "id": "53deb8e2-e81e-442a-adfb-ddf6f092179b",
+        "name": "Create Compass Event",
+        "type": "n8n-nodes-base.googleCalendar",
+        "typeVersion": 1.1,
+        "position": [
+          2540,
+          320
+        ],
+        "credentials": {
+          "googleCalendarOAuth2Api": {
+            "id": "JtrNoUzVbihCxhkY",
+            "name": "Google Calendar account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "http://dolores-brain.dolores-brain.svc.cluster.local:8003/v1/scrape",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n    \"url\": \"https://{{ $json.url.split('/')[2] }}/Services/Feed.svc/GetFeedItemByToken\",\n    \"method\": \"POST\",\n    \"body\": {\n        \"webToken\": \"{{ $json.url.split('accessToken=')[1].split('&')[0] }}\"\n    }\n}",
+          "options": {}
+        },
+        "id": "37838394-bf7d-4565-a457-38812e9ef5e2",
+        "name": "Get Full Announcement",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1460,
+          400
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "1b2cb6fb-ec88-44f9-8568-909e5e596335",
+                "leftValue": "={{  $json.involved }}",
+                "rightValue": "true",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              },
+              {
+                "id": "0486ee31-a760-427c-98b2-df59b75fe704",
+                "leftValue": "={{  $json.has_deadline_or_event }}",
+                "rightValue": "true",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "6bd9a787-32f9-4d96-99b0-086c738b83e1",
+        "name": "If",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          2160,
+          400
+        ]
+      },
+      {
+        "parameters": {
+          "operation": "addLabels",
+          "messageId": "={{ $('Trigger on Compass Email').item.json.id }}",
+          "labelIds": [
+            "Label_8922243739663485820"
+          ]
+        },
+        "id": "19d705a0-bb10-49ab-9713-ab8a92d0dc65",
+        "name": "Gmail",
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.1,
+        "position": [
+          2820,
+          540
+        ],
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "o4rS2FA3ZVrhI1QZ",
+            "name": "Gmail account"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Trigger on Compass Email": {
+        "main": [
+          [
+            {
+              "node": "Convert email html to text",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Call Dolores Brain": {
+        "main": [
+          [
+            {
+              "node": "Parse AI Response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Convert email html to text": {
+        "main": [
+          [
+            {
+              "node": "Get Full Announcement",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse AI Response": {
+        "main": [
+          [
+            {
+              "node": "If",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "If": {
+        "main": [
+          [
+            {
+              "node": "Create Compass Event",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Gmail",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Create Compass Event": {
+        "main": [
+          [
+            {
+              "node": "Gmail",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Full Announcement": {
+        "main": [
+          [
+            {
+              "node": "Call Dolores Brain",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "system migration",
+    "name": null,
+    "description": null,
+    "autosaved": false
+  },
   "tags": []
 }
