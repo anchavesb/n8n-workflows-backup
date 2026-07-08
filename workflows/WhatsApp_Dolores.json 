@@ -1,9 +1,10 @@
 {
-  "createdAt": "2026-06-21T10:13:18.686Z",
   "updatedAt": "2026-07-06T04:58:09.585Z",
+  "createdAt": "2026-06-21T10:13:18.686Z",
   "id": "sx2EbzFQd96att2P",
   "name": "WhatsApp Dolores",
   "active": true,
+  "isArchived": false,
   "nodes": [
     {
       "parameters": {
@@ -190,8 +191,209 @@
   "meta": {
     "templateCredsSetupCompleted": true
   },
+  "nodeGroups": [],
   "pinData": {},
   "versionId": "659136b5-2495-4dfb-aca5-c817c7fa6d43",
+  "activeVersionId": "659136b5-2495-4dfb-aca5-c817c7fa6d43",
   "triggerCount": 1,
+  "shared": [
+    {
+      "updatedAt": "2026-06-21T10:13:18.686Z",
+      "createdAt": "2026-06-21T10:13:18.686Z",
+      "role": "workflow:owner",
+      "workflowId": "sx2EbzFQd96att2P",
+      "projectId": "1N6feJ0Rbl0pDSNB"
+    }
+  ],
+  "activeVersion": {
+    "updatedAt": "2026-07-07T12:43:09.464Z",
+    "createdAt": "2026-07-07T12:43:09.464Z",
+    "versionId": "659136b5-2495-4dfb-aca5-c817c7fa6d43",
+    "workflowId": "sx2EbzFQd96att2P",
+    "nodes": [
+      {
+        "parameters": {
+          "jsCode": "const body = $input.first().json.body;\n\nif (body && body.event === 'messages.upsert') {\n    const data = body.data;\n    const key = data?.key;\n    const message = data?.message;\n\n    // 1. Extract raw text from the message                                                                                                                                                                                                    \n    const text = message?.conversation || message?.extendedTextMessage?.text || \"\";\n    const fromMe = key?.fromMe;\n    const remoteJid = key?.remoteJid;\n\n    // 2. Check if the message starts with \"Dolores\" (case-insensitive)                                                                                                                                                                        \n    // Matches \"Dolores, hello\", \"dolores: hello\", \"Dolores hello\"                                                                                                                                                                             \n    const triggerMatch = text.match(/^dolores\\b[,:\\s]*/i);\n    const startsWithDolores = !!triggerMatch;\n\n    // 3. Condition: Must be sent by you AND start with \"Dolores\"                                                                                                                                                                              \n    const shouldProcess = fromMe && startsWithDolores;\n\n    // 4. Strip the \"Dolores\" prefix so the AI receives a clean prompt                                                                                                                                                                         \n    let cleanText = text;\n    if (startsWithDolores) {\n        cleanText = text.substring(triggerMatch[0].length).trim();\n    }\n\n    return {\n        json: {\n            shouldProcess: shouldProcess,\n            text: cleanText,\n            remoteJid: remoteJid,\n            senderName: data?.pushName || \"Self\"\n        }\n    };\n}"
+        },
+        "id": "01851310-3a18-4116-ae92-559761122d3b",
+        "name": "Code",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          3300,
+          1040
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "84147335-2661-4295-9ef6-21ebac61fd09",
+                "leftValue": "={{ $json.shouldProcess }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "0810ad26-ba30-479d-b13d-d999a03551fe",
+        "name": "If",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          3540,
+          1040
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "http://evolution-api.whatsapp.svc.cluster.local:8080/message/sendText/dolores",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "apikey",
+                "value": "9AD07608-23F8-4363-AA0D-079E0BC3546A"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "number",
+                "value": "={{ $json.conversation_id.split('@')[0] }}"
+              },
+              {
+                "name": "text",
+                "value": "=🤖 {{ $json.message.replace(/\\s*\\[emotion:[a-z]+\\]/gi, '') }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "852d55d6-293e-4587-94d0-d4baad763438",
+        "name": "Send message to WhatsApp",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          3980,
+          1040
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "http://dolores-assistant.dolores-assistant.svc.cluster.local:8000/v1/chat",
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "message",
+                "value": "={{ $json.text }}"
+              },
+              {
+                "name": "conversation_id",
+                "value": "={{ $json.remoteJid }}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "e785765c-c3c0-45d7-8d54-60ada4d39818",
+        "name": "ASk Dolores",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          3760,
+          1040
+        ]
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "whatsapp-messages",
+          "options": {}
+        },
+        "id": "326ac5a5-7b81-4779-80c1-7e106c973861",
+        "name": "Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          3100,
+          1020
+        ],
+        "webhookId": "6ebbcfa7-41c0-42f7-8f87-66ce9830ee94"
+      }
+    ],
+    "connections": {
+      "Code": {
+        "main": [
+          [
+            {
+              "node": "If",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "If": {
+        "main": [
+          [
+            {
+              "node": "ASk Dolores",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "ASk Dolores": {
+        "main": [
+          [
+            {
+              "node": "Send message to WhatsApp",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Code",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "system migration",
+    "name": null,
+    "description": null,
+    "autosaved": false
+  },
   "tags": []
 }
